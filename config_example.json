@@ -1,0 +1,32 @@
+{
+    "criteria": {
+      "forbidden_words": ["fuck", "NFT", "hustlegrindset"],
+      "professional_check": true,
+      "tone": "respectful and thoughtful",
+      "exclude_politics": true
+    },
+    "cache": {
+      "directory": "cache/.tweet_cache",
+      "enabled": true
+    },
+    "processing": {
+      "number_of_chunks": 5
+    },
+    "model": {
+      "primary": "gemini-2.5-flash-lite",
+      "secondary": "gemini-2.5-flash",
+      "max_retries": 3
+    },
+    "batch_files": {
+      "directory": "data/batch_requests",
+      "format": "json",
+      "include_metadata": true
+    },
+    "run_defaults": {
+      "file_path": "data/raw/tweets/tweets.js",
+      "output_path": "data/processed/tweet_audit_files/report.json",
+      "chunk_id": 4,
+      "clear_cache": true,
+      "report_only": false
+    }
+  }
