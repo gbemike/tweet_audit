@@ -1,1 +1,7 @@
-
+- language of choice is python
+- batch api doesn't support generationconfig so some runs might be inconsistents since you can really enforce json structure unlike the regular api
+- takes 7275.78 seconds to run all chunks for approximately 3000 tweets
+- with 5 chunks run in parallel it takes at most 5 minutes
+- batch api is way faster and cheaper
+- we sacrifice cost and speed for potential data inconsistencies
+- cache manager added, so we won't have to rerun the same chunk, if data already exists, further saving costs

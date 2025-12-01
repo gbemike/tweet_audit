@@ -213,3 +213,5 @@ batch_flags.py
 cache/
 data/
 notebooks/
+flag_tweets.py
+notes.md
