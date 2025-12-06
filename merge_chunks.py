@@ -1,9 +1,12 @@
-#!/usr/bin/env python3
 import logging
-from config import load_config, get_config_path
-from storage import Storage
-from cache import CacheManager
+import os
+from dotenv import load_dotenv
 
+from cache import CacheManager
+from config import load_config
+from storage import Storage
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -11,10 +14,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+CONFIG_PATH = os.getenv("CONFIG_PATH")
+
 def main():
     try:
-        config_path = get_config_path()
-        config = load_config(config_path)
+        config = load_config(CONFIG_PATH)
         
         storage = Storage(config)
         
