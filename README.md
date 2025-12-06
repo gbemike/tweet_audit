@@ -2,8 +2,6 @@
 
 A high-performance, parallel tweet auditing system that uses Google's Gemini API to analyze tweets against configurable criteria and flag content for deletion.
 
----
-
 ## Overview
 
 The Tweet Audit Pipeline processes large Twitter archives by:
@@ -14,8 +12,6 @@ The Tweet Audit Pipeline processes large Twitter archives by:
 * **Automated Merging** : Combines parallel results into unified reports
 
  **Performance** : Processes 3,000 tweets in <5 minutes (vs 2 hours sequentially)
-
----
 
 ## Architecture
 
@@ -44,10 +40,8 @@ The Tweet Audit Pipeline processes large Twitter archives by:
                          ▼
                   Merge Results
                          ▼
-              merged_report.json/csv
+              merged_report.csv
 ```
-
----
 
 ## Installation
 
@@ -69,8 +63,6 @@ export GOOGLE_API_KEY=your_gemini_api_key
 # In .env, set
 CONFIG_PATH="YOUR_CONFIG_PATH"
 ```
-
----
 
 ## Configuration
 
@@ -112,14 +104,11 @@ Create `config.json`:
 }
 ```
 
----
-
 ## Usage
 
 ### Run Full Pipeline (Parallel)
 
 ```bash
-cd src
 ./run_pipeline.sh
 ```
 
@@ -140,11 +129,8 @@ python main.py --chunk-id 0
 ### Merge Results Manually
 
 ```bash
-cd src
 python merge_chunks.py
 ```
-
----
 
 ## Pipeline Workflow
 
@@ -197,8 +183,6 @@ python merge_chunks.py
 * Deletes individual chunk files
 * Releases cache lock for next run
 
----
-
 ## Output Format
 
 ### JSON Output
@@ -224,8 +208,6 @@ https://x.com/user/status/1234567890,DELETE
 https://x.com/user/status/1234567891,KEEP
 ```
 
----
-
 ## Testing
 
 ```bash
@@ -235,8 +217,6 @@ pytest tests/ -v
 # Run specific test file
 pytest tests/test_cache.py -v
 ```
-
----
 
 ## Project Structure
 
