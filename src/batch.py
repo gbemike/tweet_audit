@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError 
 
 from cache import CacheManager
 from chunker import Chunker
@@ -14,20 +15,22 @@ from config import AppConfig
 
 logger = logging.getLogger(__name__)
 
+JOB_TIMEOUT = 3600 # adjust based on tweet size
 class BatchManager:
     def __init__(self, config: AppConfig, cache: Optional[CacheManager] = None):
         self.config = config
         self.cache = cache
+        
         self.batch_path = Path(config.batch_files.directory)
-        self.criteria = config.criteria
-        self.model = config.model.primary
-        self.max_retries = config.model.max_retries
-        self.user = config.url_builder.user
-        self.base_url = config.url_builder.base_url
+        self.criteria = self.config.criteria
+        self.model = self.config.model.primary
+        self.max_retries = self.config.model.max_retries
+        self.user = self.config.url_builder.user
+        self.base_url = self.config.url_builder.base_url
 
         self.batch_path.mkdir(parents=True, exist_ok=True)
+
         self.client = genai.Client()
-        self.chunker = Chunker(config, cache=self.cache)
 
     def _create_prompt(self, tweet_text: str) -> str:
         criteria_str = (
@@ -101,32 +104,44 @@ class BatchManager:
         batch_file_path = self.batch_path / f"batch_chunk_{chunk_id}.jsonl"
         logger.info(f"[Chunk {chunk_id}] Creating batch file for {len(tweets)} tweets")
 
-        with open(batch_file_path, "w", encoding="utf-8") as f:
-            for tweet in tweets:
-                tweet_data = tweet.get("tweet", {})
-                tweet_id = str(tweet_data.get("id_str") or tweet_data.get("id", "unknown"))
-                tweet_text = tweet_data.get("full_text", "")
+        try:
+            with open(batch_file_path, "w", encoding="utf-8") as f:
+                for tweet in tweets:
+                    tweet_data = tweet.get("tweet", {})
+                    tweet_id = str(tweet_data.get("id_str") or tweet_data.get("id", "unknown"))
+                    tweet_text = tweet_data.get("full_text", "")
 
-                request_obj = {
-                    "key": tweet_id,
-                    # "tweet_id": tweet_id,
-                    "tweet_url": self.base_url.format(user=self.user, id=tweet_id),
-                    "request": {
-                        "contents": [{
-                            "parts": [{
-                                "text": self._create_prompt(tweet_text)
+                    request_obj = {
+                        "key": tweet_id,
+                        # "tweet_id": tweet_id,
+                        "tweet_url": self.base_url.format(user=self.user, id=tweet_id),
+                        "request": {
+                            "contents": [{
+                                "parts": [{
+                                    "text": self._create_prompt(tweet_text)
+                                }]
                             }]
-                        }]
+                        }
                     }
-                }
-                f.write(json.dumps(request_obj, ensure_ascii=False) + "\n")
+                    f.write(json.dumps(request_obj, ensure_ascii=False) + "\n")
+        except IOError as e:
+            logger.error(f"[Chunk {chunk_id}] Failed to write local batch file {batch_file_path}: {e}")
+            raise
 
         logger.info(f"[Chunk {chunk_id}] Local batch file created: {batch_file_path.resolve()}")
 
-        uploaded_file = self.client.files.upload(
-            file=batch_file_path,
-            config=types.UploadFileConfig(display_name=f"audit_chunk_{chunk_id}", mime_type="jsonl")
-        )
+        try:
+            uploaded_file = self.client.files.upload(
+                file=batch_file_path,
+                config=types.UploadFileConfig(display_name=f"audit_chunk_{chunk_id}", mime_type="jsonl")
+            )
+        except APIError as e:
+            logger.error(f"[Chunk {chunk_id}] API failed to upload file {batch_file_path}. Details: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"[Chunk {chunk_id}] Unexpected error during file upload: {e}")
+            raise
+
         logger.info(f"[Chunk {chunk_id}] Uploaded file: {uploaded_file.name}")
         return uploaded_file
 
@@ -148,24 +163,40 @@ class BatchManager:
 
     def _poll_job_until_complete(self, job: types.BatchJob) -> types.BatchJob:
         completed_states = {"JOB_STATE_SUCCEEDED", "JOB_STATE_FAILED", "JOB_STATE_CANCELLED"}
+        start_time = time.time()
 
         while True:
-            current_job = self.client.batches.get(name=job.name)
-            state = current_job.state.name
-            logger.info(f"Job {job.name} state: {state}")
+            if time.time() - start_time > JOB_TIMEOUT:
+                logger.error(f"Job {job.name} timed out after {JOB_TIMEOUT} seconds while polling.")
+                raise TimeoutError(f"Batch job {job.name} exceeded maximum polling time.")
+            
+            try:
+                current_job = self.client.batches.get(name=job.name)
+                state = current_job.state.name
+                logger.info(f"Job {job.name} state: {state}")
 
-            if state in completed_states:
-                return current_job
+                if state in completed_states:
+                    return current_job
+            except APIError as e:
+                logger.warning(f"API Error while polling job {job.name}. Retrying in 30s. Error: {e}")
 
             time.sleep(30)
 
-    def handle_results(self, job: types.BatchJob, tweets: List[Dict]):
+    def handle_results(self, job: types.BatchJob) -> List[Dict]:
         if not job.dest or not job.dest.file_name:
             logger.error(f"Job {job.name} has no output file")
             return
 
         logger.info(f"Downloading results for job {job.name}...")
-        file_content = self.client.files.download(file=job.dest.file_name).decode("utf-8")
+
+        try:
+            file_content = self.client.files.download(file=job.dest.file_name).decode("utf-8")
+        except APIError as e:
+            logger.error(f"API failed to download results for job {job.name}. Details: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during results download for job {job.name}: {e}")
+            raise
 
         parsed_results = []
         failed_count = 0
@@ -224,7 +255,7 @@ class BatchManager:
         
         return parsed_results
 
-    def run_batch_pipeline(self, tweets: List[Dict], chunk_id: int):
+    def run_batch_pipeline(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
         if not tweets:
             logger.info(f"Chunk {chunk_id}: No tweets to process")
             return []
@@ -240,6 +271,6 @@ class BatchManager:
                 logger.error(f"Error details: {completed_job.error}")
             return []
         
-        results = self.handle_results(completed_job, tweets)
+        results = self.handle_results(completed_job)
 
         return results

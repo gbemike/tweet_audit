@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import time
@@ -17,6 +18,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 CONFIG_PATH = os.getenv("CONFIG_PATH")
 
 def main():
+    parser = argparse.ArgumentParser(description="Run the Tweet Audit Pipeline in chunks.")
+    parser.add_argument(
+        "--chunk-id", 
+        type=int, 
+        default=None, 
+        help="Specify the chunk ID to process for parallel execution (0 to N-1)."
+    )
+    args = parser.parse_args()
+
     start_time = time.time()
     logger.info("Loading configuration...")
     config = load_config(CONFIG_PATH)
@@ -26,6 +36,10 @@ def main():
     storage = Storage(config)
 
     logger.info("Loading tweets...")
+
+    if config.run_defaults.clear_cache:
+        cache.clear()
+        
     tweets = storage.read_data()
 
     orchestrator = Orchestrator(config, storage, cache)
@@ -33,7 +47,7 @@ def main():
     logger.info("Starting orchestrator...")
     orchestrator.run(
         tweets,
-        chunk_id=config.run_defaults.chunk_id
+        chunk_id=args.chunk_id
     )
 
     elapsed_time = time.time() - start_time

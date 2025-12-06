@@ -215,3 +215,4 @@ data/
 notebooks/
 flag_tweets.py
 notes.md
+logs/

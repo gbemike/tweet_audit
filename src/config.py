@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 
 @dataclass(frozen=True)
@@ -22,8 +22,6 @@ class CacheConfig:
 class ProcessingConfig:
     number_of_chunks: int
     default_csv_fields: List[str]
-    default_csv_filename: str
-    default_json_filename: str
 
 
 @dataclass(frozen=True)
@@ -42,8 +40,6 @@ class BatchFilesConfig:
 class RunDefaultsConfig:
     file_path: str
     output_path: str
-    report_path: str
-    chunk_id: int
     clear_cache: bool
 
 @dataclass(frozen=True)
@@ -60,7 +56,6 @@ class AppConfig:
     batch_files: BatchFilesConfig
     run_defaults: RunDefaultsConfig
     url_builder: UrlBuilder
-
 
 def load_config(path: str | Path) -> AppConfig:
     try:
@@ -82,4 +77,9 @@ def load_config(path: str | Path) -> AppConfig:
             url_builder=UrlBuilder(**raw.get("url_builder", {})),
         )
     except TypeError as e:
-        raise TypeError(f"Invalid config structure: {e}")
+        required_keys = ['criteria', 'cache', 'processing', 'model', 'batch_files', 'run_defaults', 'url_builder']
+        missing_keys = [k for k in required_keys if k not in raw]
+        if missing_keys:
+             raise TypeError(f"Invalid config structure: Missing top-level keys: {', '.join(missing_keys)}")
+        else:
+             raise TypeError(f"Invalid config structure: {e}")

@@ -16,10 +16,16 @@ class Storage:
 
         self.output_path.mkdir(parents=True, exist_ok=True)
 
+        self.number_of_chunks = config.processing.number_of_chunks
+
     def read_data(self) -> List[Dict]:
         if not self.data_path.exists():
             logger.error(f"Data file not found: {self.data_path}")
             raise FileNotFoundError(f"Data file not found: {self.data_path}")
+        
+        if self.data_path.suffix.lower() != ".js":
+            logger.error(f"Invalid file type: Expected '.js' but found '{self.data_path.suffix}'")
+            raise ValueError("Input data file must have a '.js' extension for custom parsing.")
 
         try:
             with open(self.data_path, 'r', encoding='utf-8') as f:
@@ -31,58 +37,61 @@ class Storage:
             data = json.loads(json_array_str)
             logger.info(f"Loaded {len(data)} items from {self.data_path}")
             return data
+        except json.JSONDecodeError as e:
+                logger.error(f"Failed to decode JSON content extracted by regex: {e}")
+                raise ValueError(f"Extracted content is not valid JSON: {e}")
         except Exception as e:
             logger.error(f"Failed to read data: {e}")
             raise
 
-    def save_json(self, data: List[Dict], filename: str = None, chunk_id: int = None) -> Optional[Path]:
-        if not data:
-            logger.warning("No data to save.")
-            return None
-
-        if chunk_id is not None:
-            filename = f"report_chunk_{chunk_id}.json"
-
+    def save_json(self, data: List[Dict], chunk_id: int) -> Path:
+        filename = f"report_chunk_{chunk_id}.json"
         output_file = self.output_path / filename
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        logger.info(f"JSON saved: {output_file.resolve()}")
-        return output_file
+        
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            
+            if not data:
+                logger.info(f"Empty JSON saved: {output_file.resolve()}")
+            else:
+                logger.info(f"JSON saved: {output_file.resolve()} ({len(data)} items)")
+            
+            return output_file
+            
+        except Exception as e:
+            logger.error(f"Failed to save JSON to {output_file}: {e}")
+            raise
 
-    def save_csv(self, data: List[Dict], fieldnames: List[str], filename: str = None, chunk_id: int = None) -> Optional[Path]:
-        if not data:
-            logger.warning("No data to save.")
-            return None
 
-        if chunk_id is not None:
-            filename = f"report_chunk_{chunk_id}.csv"
-
+    def save_csv(self, data: List[Dict], fieldnames: List[str], chunk_id: int) -> Path:
+        filename = f"report_chunk_{chunk_id}.csv"
         output_file = self.output_path / filename
+        
         try:
             with open(output_file, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
                 writer.writeheader()
-                for row in data:
-                    deletion = row.get("deletion", "N/A")
-                    tweet_url = row.get("tweet_url", "")
-                    if deletion != "N/A" and tweet_url != "":
-                        writer.writerow({
-                            "tweet_url": tweet_url,
-                            "deletion": deletion
-                        })
-                    
-            logger.info(f"CSV saved: {output_file.resolve()}")
+                writer.writerows(data)
+            
+            logger.info(f"CSV saved: {output_file.resolve()} ({len(data)} rows)")
+            return output_file
+            
         except Exception as e:
-            logger.error(f"Failed to save data to CSV {output_file}")
-        return output_file
+            logger.error(f"Failed to save CSV to {output_file}: {e}")
+            raise
 
-
-    def merge_chunks(self, pattern: str = "*_chunk_*.csv", output_name: str = "merged_report.csv") -> Optional[Path]:
+    def merge_chunks(self, pattern: str = "*_chunk_*.csv", output_name: str = "merged_report.csv") -> None:
         chunk_files = sorted(self.output_path.glob(pattern))
 
         if not chunk_files:
-            logger.warning("No chunk files found to merge.")
-            return
+            logger.error("No chunk files found to merge. Pipeline failed.")
+            raise FileNotFoundError("No chunk files to merge")
+        
+        expected_chunks = self.number_of_chunks
+        if len(chunk_files) != expected_chunks:
+            logger.error(f"Expected {expected_chunks} chunks, found {len(chunk_files)}")
+            raise ValueError("Incomplete chunk files - refusing to merge")
 
         output_file = self.output_path / output_name
         try:
@@ -93,14 +102,18 @@ class Storage:
                     with open(file, 'r', encoding='utf-8') as f:
                         reader = csv.DictReader(f)
                         if idx == 0:
-                            # write headers
-                            writer = csv.DictWriter(outfile, fieldnames=reader.fieldnames)
+                            writer = csv.DictWriter(outfile, fieldnames=reader.fieldnames, extrasaction="ignore")
                             writer.writeheader()
                         for row in reader:
                             writer.writerow(row)
                     logger.info(f"Merged {file.name}")
 
             logger.info(f"All chunks merged to: {output_file.resolve()}")
+
+            for file in chunk_files:
+                file.unlink()
+                logger.info("Cleaned up chunk files")
+
             return output_file
         
         except Exception as e:

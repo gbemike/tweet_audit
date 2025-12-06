@@ -14,8 +14,11 @@ class CacheManager:
         self.enabled = cache_cfg.enabled
         self.cache_dir = Path(cache_cfg.directory)
 
+        self.lock_path = self.cache_dir / "clear_cache.lock"
+
         if self.enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+
 
     def _get_file_path(self, tweet_id: str) -> Path:
         safe_id = str(tweet_id).strip()
@@ -59,14 +62,40 @@ class CacheManager:
         if not self.enabled:
             logger.debug(f"Cache is disabled can't clear")
             return None
+        
+        try:
+            self.lock_path.mkdir(exist_ok=False) 
+            logger.info("Lock acquired. Starting cache clear.")
+        
+        except FileExistsError:
+            logger.debug("Cache clear operation is already running by another process. Skipping this request.")
+            return
+        
+        except Exception as e:
+            logger.error(f"Failed to acquire lock: {e}")
+            return
+        
         cleared = 0
         for files in self.cache_dir.glob("*.pkl"):
             try:
-                files.unlink()
+                files.unlink(missing_ok=True)
                 cleared += 1
             except Exception as e:
                 logger.error(f"Failed to delete {files}: {e}")
         logger.info(f"Cleared {cleared} cached files")
+
+    def release_lock(self):
+        if not self.enabled:
+            return
+        
+        try:
+            if self.lock_path.exists():
+                self.lock_path.rmdir()
+                logger.info("Cache lock released")
+                return True
+        except Exception as e:
+            logger.warning(f"Failed to release cache lock: {e}")
+            return False
             
     def get_stats(self) -> dict:
         if not self.cache_dir.exists():
