@@ -162,6 +162,9 @@ class BatchManager:
                 raise e
 
     def _poll_job_until_complete(self, job: types.BatchJob) -> types.BatchJob:
+        if job is None:
+            raise ValueError("Cannot poll job: Batch job object is None due to prior submission failure.")
+        
         completed_states = {"JOB_STATE_SUCCEEDED", "JOB_STATE_FAILED", "JOB_STATE_CANCELLED"}
         start_time = time.time()
 

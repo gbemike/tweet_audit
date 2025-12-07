@@ -35,7 +35,6 @@ def test_storage_rejects_malformed_js(valid_config, temp_dirs):
     with pytest.raises((ValueError, json.JSONDecodeError)):
         storage.read_data()
 
-# this is sus
 def test_storage_rejects_missing_file(valid_config, temp_dirs):
     missing_file = temp_dirs['root'] / "nonexistent.js"
     
