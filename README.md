@@ -113,7 +113,7 @@ Create `config.json`:
 
 ## Usage
 
-Download your tweets data and place `tweet.js` inside `data/raw`.
+Download your tweets data and place `tweet.js` inside `data/raw/tweets `.
 
 ### Run Full Pipeline (Parallel)
 
