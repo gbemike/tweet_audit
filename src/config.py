@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Any, Dict
 
 
 @dataclass(frozen=True)
@@ -57,14 +57,32 @@ class AppConfig:
     run_defaults: RunDefaultsConfig
     url_builder: UrlBuilder
 
+
 def load_config(path: str | Path) -> AppConfig:
+    """Loads the config file and converts all relative paths to absolute paths."""
+    
+    path = Path(path).resolve() 
+    base_dir = path.parent 
+    
     try:
         with open(path, encoding="utf-8") as f:
-            raw = json.load(f)
+            raw: Dict[str, Any] = json.load(f)
     except FileNotFoundError:
         raise FileNotFoundError(f"Config file not found: {path}")
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in config file: {e}")
+
+    
+    def _resolve_path(parent_key: str, child_key: str):
+        if parent_key in raw and child_key in raw[parent_key]:
+            raw_path = raw[parent_key][child_key]
+            absolute_path = (base_dir / raw_path).resolve()            
+            raw[parent_key][child_key] = str(absolute_path)
+            
+    _resolve_path("cache", "directory")
+    _resolve_path("batch_files", "directory")
+    _resolve_path("run_defaults", "file_path")
+    _resolve_path("run_defaults", "output_path")
     
     try:
         return AppConfig(

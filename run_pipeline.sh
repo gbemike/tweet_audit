@@ -51,7 +51,7 @@ if [ $FAILED -eq 1 ]; then
     exit 1
 fi
 
-python merge_chunks.py
+python src/merge_chunks.py
 
 if [ $? -ne 0 ]; then
     echo "Merge failed"

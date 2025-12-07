@@ -211,7 +211,6 @@ twitter-2025-11-26/
 config.json
 batch_flags.py
 cache/
-data/
 notebooks/
 flag_tweets.py
 notes.md

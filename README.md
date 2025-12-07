@@ -43,25 +43,32 @@ The Tweet Audit Pipeline processes large Twitter archives by:
               merged_report.csv
 ```
 
-## Installation
+## Installation and Setup
 
 ```bash
+# macOS/Linux (Install Poetry)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Or via pip
+pip install poetry
+
 # Clone repository
 git clone <repository-url>
 cd tweet-audit
 
-# Create virtual environment
+# set up virtual environment
 python -m venv venv
 source venv/bin/activate
 
-# Install in editable mode
-pip install -e .
+# install project dependencies
+poetry install
 
 # Set environment variables
 export GOOGLE_API_KEY=your_gemini_api_key
 
 # In .env, set
 CONFIG_PATH="YOUR_CONFIG_PATH"
+GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ```
 
 ## Configuration
@@ -70,14 +77,14 @@ Create `config.json`:
 
 ```json
 {
-  "criteria": {
-    "forbidden_words": ["profanity", "slurs"],
-    "topics_to_exclude": ["Outdated opinions", "Controversial statements"],
-    "tone_requirements": ["Professional language only"],
-    "additional_instructions": "Flag content harmful to professional reputation"
+"criteria": {
+  "forbidden_words": ["fuck", "shit"],
+  "topics_to_exclude": ["Outdated opinions", "Controversial statements"],
+  "tone_requirements": ["Professional language only"],
+  "additional_instructions": "Flag any content that could harm professional reputation and contains any sort of profanity"
   },
   "cache": {
-    "directory": "cache/",
+    "directory": "cache/.tweet_cache/",
     "enabled": true
   },
   "processing": {
@@ -90,21 +97,23 @@ Create `config.json`:
     "max_retries": 3
   },
   "batch_files": {
-    "directory": "batch_files/"
+    "directory": "data/batch_requests/"
   },
   "run_defaults": {
-    "file_path": "data/tweets.js",
-    "output_path": "output/",
-    "clear_cache": false
+    "file_path": "data/raw/tweets/tweets.js",
+    "output_path": "data/processed/tweet_audit_files/",
+    "clear_cache": true
   },
   "url_builder": {
-    "user": "your_twitter_handle",
+    "user": "your_username",
     "base_url": "https://x.com/{user}/status/{id}"
   }
 }
 ```
 
 ## Usage
+
+Download your tweets data and place `tweet.js` inside `data/raw`.
 
 ### Run Full Pipeline (Parallel)
 
@@ -122,14 +131,13 @@ This script:
 ### Run Single Chunk (For Testing)
 
 ```bash
-cd src
-python main.py --chunk-id 0
+poetry run python src/main.py --chunk-id 1
 ```
 
 ### Merge Results Manually
 
 ```bash
-python merge_chunks.py
+poetry run python src/merge_chunks.py
 ```
 
 ## Pipeline Workflow
@@ -212,16 +220,19 @@ https://x.com/user/status/1234567891,KEEP
 
 ```bash
 # Run all tests
-pytest tests/ -v
+poetry run pytest tests/ -v
 
 # Run specific test file
-pytest tests/test_cache.py -v
+poetry run pytest tests/test_cache.py -v
 ```
 
 ## Project Structure
 
 ```
 tweet-audit/
+├── cache/
+├── data/
+├── logs/
 ├── src/
 │   ├── config.py          # Configuration loading
 │   ├── cache.py           # Cache management
@@ -229,11 +240,11 @@ tweet-audit/
 │   ├── chunker.py         # Data partitioning
 │   ├── batch.py           # Batch API integration
 │   ├── orchestrator.py    # Workflow coordination
+│   ├── merge_chunks.py    # Result merging
 │   └── main.py            # Entry point
 ├── tests/
 │   └── ...                # Integration tests
 ├── run_pipeline.sh        # Shell orchestrator
-├── merge_chunks.py        # Result merging
 ├── config.json            # Configuration
 ├── pyproject.toml         # Package definition
 └── pytest.ini             # Test configuration

@@ -32,14 +32,14 @@ def main():
     config = load_config(CONFIG_PATH)
     cache = CacheManager(config)
 
+    logger.info("Checking cache...")
+    if config.run_defaults.clear_cache:
+        cache.clear()
+
     logger.info("Initializing storage...")
     storage = Storage(config)
 
     logger.info("Loading tweets...")
-
-    if config.run_defaults.clear_cache:
-        cache.clear()
-        
     tweets = storage.read_data()
 
     orchestrator = Orchestrator(config, storage, cache)

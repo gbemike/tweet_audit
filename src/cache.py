@@ -18,7 +18,7 @@ class CacheManager:
 
         if self.enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
-
+            logger.info(f"Cache is enabled and ready at {self.cache_dir.resolve()}")
 
     def _get_file_path(self, tweet_id: str) -> Path:
         safe_id = str(tweet_id).strip()
@@ -58,19 +58,13 @@ class CacheManager:
         except Exception as e:
             logger.warning(f"Failed to write cache for {tweet_id}: {e}")
 
-    def clear(self):
-        if not self.enabled:
-            logger.debug(f"Cache is disabled can't clear")
-            return None
-        
+    def clear(self):        
         try:
             self.lock_path.mkdir(exist_ok=False) 
             logger.info("Lock acquired. Starting cache clear.")
-        
         except FileExistsError:
-            logger.debug("Cache clear operation is already running by another process. Skipping this request.")
+            logger.info("Lock not needed. Skipping this request.")
             return
-        
         except Exception as e:
             logger.error(f"Failed to acquire lock: {e}")
             return
@@ -79,6 +73,7 @@ class CacheManager:
         for files in self.cache_dir.glob("*.pkl"):
             try:
                 files.unlink(missing_ok=True)
+                logger.info(f"Removing {files} from cache")
                 cleared += 1
             except Exception as e:
                 logger.error(f"Failed to delete {files}: {e}")
