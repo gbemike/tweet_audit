@@ -78,10 +78,10 @@ Create `config.json`:
 ```json
 {
 "criteria": {
-  "forbidden_words": ["fuck", "shit"],
-  "topics_to_exclude": ["Outdated opinions", "Controversial statements"],
-  "tone_requirements": ["Professional language only"],
-  "additional_instructions": "Flag any content that could harm professional reputation and contains any sort of profanity"
+    "forbidden_words": ["profanity1", "profanity2"],
+    "topics_to_exclude": ["topic_1", "topic-2"],
+    "tone_requirements": ["tone_1", "tone_1"],
+    "additional_instructions": "polite twwets only"
   },
   "cache": {
     "directory": "cache/.tweet_cache/",
