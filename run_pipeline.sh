@@ -1,8 +1,9 @@
+#!/usr/bin/env bash
 set -e
 
 NUM_CHUNKS=5
 
-CONFIG_MAX_CHUNKS=$(python -c "
+CONFIG_MAX_CHUNKS=$(poetry run python -c "
 import json
 import os
 from dotenv import load_dotenv
@@ -30,7 +31,7 @@ LOG_DIR="logs"
 mkdir -p "$LOG_DIR"
 
 for i in $(seq 0 $((NUM_CHUNKS - 1))); do
-    python src/main.py --chunk-id $i > "$LOG_DIR/chunk_$i.log" 2>&1 &
+    poetry run python src/main.py --chunk-id $i > "$LOG_DIR/chunk_$i.log" 2>&1 &
     PIDS+=($!)
 done
 
@@ -51,7 +52,7 @@ if [ $FAILED -eq 1 ]; then
     exit 1
 fi
 
-python src/merge_chunks.py
+poetry run python src/merge_chunks.py
 
 if [ $? -ne 0 ]; then
     echo "Merge failed"

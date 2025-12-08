@@ -22,6 +22,8 @@ class CacheConfig:
 class ProcessingConfig:
     number_of_chunks: int
     default_csv_fields: List[str]
+    merge_pattern: str = "*_chunk_*.csv"
+    merge_output_name: str = "merged_report.csv"
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,7 @@ class ModelConfig:
     primary: str
     secondary: str
     max_retries: int
+    job_timeout: int = 3600
 
 
 @dataclass(frozen=True)

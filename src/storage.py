@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class Storage:
     def __init__(self, config: AppConfig):
+        self.config = config
         self.data_path = Path(config.run_defaults.file_path)
         self.output_path = Path(config.run_defaults.output_path)
 
@@ -81,7 +82,9 @@ class Storage:
             logger.error(f"Failed to save CSV to {output_file}: {e}")
             raise
 
-    def merge_chunks(self, pattern: str = "*_chunk_*.csv", output_name: str = "merged_report.csv") -> None:
+    def merge_chunks(self) -> None:
+        pattern = self.config.processing.merge_pattern
+        output_name = self.config.processing.merge_output_name
         chunk_files = sorted(self.output_path.glob(pattern))
 
         if not chunk_files:

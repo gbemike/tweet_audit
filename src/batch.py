@@ -15,7 +15,6 @@ from config import AppConfig
 
 logger = logging.getLogger(__name__)
 
-JOB_TIMEOUT = 3600 # adjust based on tweet size
 class BatchManager:
     def __init__(self, config: AppConfig, cache: Optional[CacheManager] = None):
         self.config = config
@@ -25,6 +24,7 @@ class BatchManager:
         self.criteria = self.config.criteria
         self.model = self.config.model.primary
         self.max_retries = self.config.model.max_retries
+        self.job_timeout = self.config.model.job_timeout
         self.user = self.config.url_builder.user
         self.base_url = self.config.url_builder.base_url
 
@@ -169,8 +169,8 @@ class BatchManager:
         start_time = time.time()
 
         while True:
-            if time.time() - start_time > JOB_TIMEOUT:
-                logger.error(f"Job {job.name} timed out after {JOB_TIMEOUT} seconds while polling.")
+            if time.time() - start_time > self.job_timeout:
+                logger.error(f"Job {job.name} timed out after {self.job_timeout} seconds while polling.")
                 raise TimeoutError(f"Batch job {job.name} exceeded maximum polling time.")
             
             try:

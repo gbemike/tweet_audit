@@ -43,6 +43,12 @@ The Tweet Audit Pipeline processes large Twitter archives by:
               merged_report.csv
 ```
 
+## Prerequisites
+
+* Python 3.11 or higher.
+* [Poetry](https://python-poetry.org/) for dependency management.
+* At least a Tier 1 API KEY, Google Gemini API key ([get one here](https://ai.google.dev/)). The tool uses Geminis Batch API which cannot be used on a free tier.
+
 ## Installation and Setup
 
 ```bash
@@ -78,7 +84,7 @@ GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 
 ## Configuration
 
-Create `config.json`:
+Create `config.json`, fill in `criteria` and `username` (your twitter username).
 
 ```json
 {
@@ -118,7 +124,7 @@ Create `config.json`:
 
 ## Usage
 
-Download your tweets data and place `tweet.js` inside `data/raw/tweets `.
+Create a directory within the project called `data/raw/tweets ` then download your tweets from X , with your downloaded data take the file called `tweets.js` and place it within the `data/raw/tweets` directory.
 
 ### Run Full Pipeline (Parallel)
 
