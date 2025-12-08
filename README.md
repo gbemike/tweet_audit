@@ -54,11 +54,16 @@ pip install poetry
 
 # Clone repository
 git clone <repository-url>
-cd tweet-audit
+cd tweet_audit
 
-# set up virtual environment
+# Create virtual environment
 python -m venv venv
+
+# Activate virtual environment Linux
 source venv/bin/activate
+
+# Windows
+venv/Scripts/activate
 
 # install project dependencies
 poetry install
