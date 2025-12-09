@@ -1,12 +1,3 @@
-# Receives chunk data from orchestrator
-# Creates batch file (JSONL format)
-# Uploads to File API
-# Creates and polls job
-# Retrieves and parses results
-# Results → Flow to storage for saving
-# Results → Saved to cache if enabled
-# API failures → Stop worker with exit code 1
-
 import json
 from pathlib import Path
 
