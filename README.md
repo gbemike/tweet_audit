@@ -84,7 +84,7 @@ GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 
 ## Configuration
 
-Create `config.json`, fill in `criteria` and `username` (your twitter username).
+Rename the `config_example.json` to `config.json`, fill in `criteria `and `username` (your twitter username).
 
 ```json
 {
@@ -124,7 +124,7 @@ Create `config.json`, fill in `criteria` and `username` (your twitter username).
 
 ## Usage
 
-Create a directory within the project called `data/raw/tweets ` then download your tweets from X , with your downloaded data take the file called `tweets.js` and place it within the `data/raw/tweets` directory.
+Create a directory within the project called `data/raw/tweets ` then download your tweets from X , with your downloaded data take the file called `tweets.js` and place it within the `data/raw/tweets` directory. 
 
 ### Run Full Pipeline (Parallel)
 
@@ -132,14 +132,7 @@ Create a directory within the project called `data/raw/tweets ` then download yo
 ./run_pipeline.sh
 ```
 
-This script:
-
-1. Validates configuration
-2. Spawns N parallel workers (one per chunk)
-3. Waits for all workers to complete
-4. Merges results if all succeed
-
-### Run Single Chunk (For Testing)
+### Run Single Chunk
 
 ```bash
 poetry run python src/main.py --chunk-id 1
@@ -176,7 +169,7 @@ poetry run python src/merge_chunks.py
 ### Stage 3: Chunking & Filtering
 
 * **Chunking** : Round-robin distribution (`index % num_chunks == chunk_id`)
-* **Cache Filtering** : Checks `cache.exists(tweet_id)` for each tweet
+* **Cache Filtering** : Checks if tweets have been cached already.
 * Returns only uncached tweets for processing
 
 ### Stage 4: Batch API Processing
@@ -191,13 +184,11 @@ poetry run python src/merge_chunks.py
 
 ### Stage 5: Save Results
 
-* Writes chunk JSON: `report_chunk_N.json` (full results)
 * Writes chunk CSV: `report_chunk_N.csv` (filtered: tweet_url, deletion)
 
 ### Stage 6: Merge
 
 * Validates expected chunk count matches actual files
-* Combines all JSON chunks into `merged_report.json`
 * Combines all CSV chunks into `merged_report.csv`
 * Deletes individual chunk files
 * Releases cache lock for next run
@@ -208,14 +199,18 @@ poetry run python src/merge_chunks.py
 
 ```json
 [
-  {
-    "tweet_id": "1234567890",
-    "tweet_url": "https://x.com/user/status/1234567890",
-    "explicit_words": ["damn"],
-    "reason_for_flag": "Contains mild profanity",
-    "topic_of_tweet": ["complaint", "frustration"],
-    "deletion": "DELETE"
-  }
+    {
+        "explicit_words": [],
+        "reason_for_flag": "Tweet is clean and appropriate",
+        "topic_of_tweet": [
+            "geography",
+            "travel",
+            "location"
+        ],
+        "deletion": "KEEP",
+        "tweet_id": "1991055144646050238",
+        "tweet_url": "https://x.com/{user}/status/{id}"
+    },
 ]
 ```
 

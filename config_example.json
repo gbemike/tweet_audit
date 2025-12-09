@@ -14,8 +14,8 @@
       "default_csv_fields": ["tweet_url", "deletion"]
     },
     "model": {
-      "primary": "gemini-2.5-flash-lite",
-      "secondary": "gemini-2.5-flash",
+      "primary": "gemini-2.5-flash",
+      "secondary": "gemini-2.5-flash-lite",
       "max_retries": 3
     },
     "batch_files": {
