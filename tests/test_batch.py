@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from batch import BatchManager
 from cache import CacheManager
 
@@ -164,7 +162,7 @@ def test_run_batch_pipeline_with_empty_tweets(valid_config, mock_genai_client):
     assert results == []
 
 
-def test_batch_manager_url_building(valid_config, sample_tweets, mock_genai_client):    
+def test_batch_manager_url_building(valid_config, sample_tweets, mock_genai_client):
     batch_manager = BatchManager(valid_config)
     tweet_id = sample_tweets[0]['tweet']['id_str']
     
@@ -176,3 +174,4 @@ def test_batch_manager_url_building(valid_config, sample_tweets, mock_genai_clie
     )
 
     assert actual_url == expected_url
+

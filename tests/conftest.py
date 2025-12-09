@@ -4,6 +4,7 @@ import shutil
 import tempfile
 from io import StringIO
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -181,47 +182,6 @@ def mock_batch_api(monkeypatch):
 
 @pytest.fixture
 def mock_genai_client(monkeypatch):
-    """Mock the Google GenAI client for batch operations."""
-    
-    fake_batch_output = """
-    {"key": "tweet_1", "tweet_url": "https://x.com/user/status/tweet_1", "response": {"candidates": [{"content": {"parts": [{"text": "{\\"explicit_words\\": [], \\"reason_for_flag\\": \\"Clean\\", \\"topic_of_tweet\\": [\\"tech\\"], \\"deletion\\": \\"KEEP\\"}"}]}}]}}
-    {"key": "tweet_2", "tweet_url": "https://x.com/user/status/tweet_2", "response": {"candidates": [{"content": {"parts": [{"text": "{\\"explicit_words\\": [\\"damn\\"], \\"reason_for_flag\\": \\"Profanity\\", \\"topic_of_tweet\\": [\\"rant\\"], \\"deletion\\": \\"DELETE\\"}"}]}}]}}
-    """
-    
-    class FakeFile:
-        name = "fake_file_uri_12345"
-    
-    class FakeJob:
-        name = "fake_job_67890"
-        
-        class State:
-            name = "JOB_STATE_SUCCEEDED"
-        
-        state = State()
-        
-        class Dest:
-            file_name = "fake_result_file"
-        
-        dest = Dest()
-    
-    class FakeFiles:
-        def upload(self, file, config):
-            return FakeFile()
-        
-        def download(self, file):
-            return fake_batch_output.encode("utf-8")
-    
-    class FakeBatches:
-        def create(self, model, src, config):
-            return FakeJob()
-        
-        def get(self, name):
-            return FakeJob()
-    
-    class FakeClient:
-        files = FakeFiles()
-        batches = FakeBatches()
-    
-    monkeypatch.setattr('batch.genai.Client', lambda: FakeClient())
-    
-    return FakeClient()
+    mock_client = MagicMock()
+    monkeypatch.setattr('batch.genai.Client', lambda: mock_client)
+    return mock_client

@@ -92,19 +92,3 @@ class CacheManager:
             logger.warning(f"Failed to release cache lock: {e}")
             return False
             
-    def get_stats(self) -> dict:
-        if not self.cache_dir.exists():
-            return {'enabled': self.enabled, 'exists': False, 'total_entries': 0}
-
-        files = list(self.cache_dir.glob("*.pkl"))
-        total_size = sum(f.stat().st_size for f in files)
-        stats = {
-            'enabled': self.enabled,
-            'exists': True,
-            'total_entries': len(files),
-            'total_size_bytes': total_size,
-            'total_size_kb': round(total_size / 1024, 2),
-        }
-        logger.info(f"Cache stats: {stats}")
-        return stats
-    
