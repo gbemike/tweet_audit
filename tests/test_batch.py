@@ -50,12 +50,16 @@ def test_create_batch_file_generates_jsonl(valid_config, sample_tweets, mock_gen
     tweets_subset = sample_tweets[:5]
     chunk_id = 0
 
-    batch_manager.create_batch_file(tweets_subset, chunk_id)
+    file = batch_manager.create_batch_file(tweets_subset, chunk_id)
     
     batch_file_path = batch_manager.batch_path / f"batch_chunk_{chunk_id}.jsonl"
+
+    assert file.name == "files/1234567890" 
     
     with open(batch_file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
+
+    
         
     assert len(lines) == 5
     
@@ -175,3 +179,33 @@ def test_batch_manager_url_building(valid_config, sample_tweets, mock_genai_clie
 
     assert actual_url == expected_url
 
+def test_full_batch_pipeline(valid_config, sample_tweets, mock_genai_client):
+    cache = CacheManager(valid_config)
+    batch_manager = BatchManager(valid_config, cache=cache)
+    file = batch_manager.create_batch_file(tweets=sample_tweets, chunk_id=1)
+
+    assert file.name == "files/1234567890" 
+
+    job = batch_manager._submit_batch_with_retry(file.name, chunk_id=1)
+
+    completed_job = batch_manager._poll_job_until_complete(job)
+
+    assert completed_job.state.name == "JOB_STATE_SUCCEEDED"
+
+    results = batch_manager.handle_results(job)
+
+    assert isinstance(results, list)
+    
+    assert len(results) == 3
+    
+    assert 'deletion' in results[0]
+    
+
+    assert results[0]['tweet_id'] == "tweet_0"
+    assert results[0]['deletion'] == "DELETE"
+    assert results[0]['reason_for_flag'] == "Profanity" 
+
+    assert results[1]['tweet_id'] == "tweet_1"
+    assert results[1]['deletion'] == "KEEP"
+    assert results[1]['topic_of_tweet'] == ['tech']    
+    

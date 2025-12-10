@@ -179,9 +179,48 @@ def mock_batch_api(monkeypatch):
     # patch the reference inside orchestrator module, where Orchestrator uses it
     monkeypatch.setattr('orchestrator.BatchManager', FakeBatchManager)
 
-
 @pytest.fixture
 def mock_genai_client(monkeypatch):
-    mock_client = MagicMock()
-    monkeypatch.setattr('batch.genai.Client', lambda: mock_client)
-    return mock_client
+    class FakeFile:
+        name = "files/1234567890"
+    class FakeFiles:
+        def upload(self, config, file):
+            return FakeFile()
+        
+        def download(self, file):
+            result_data = [
+                {"key": "tweet_0", "tweet_url": "https://x.com/user/status/tweet_0", "response": {"candidates": [{"content": {"parts": [{"text": json.dumps({"explicit_words": ["shit"], "reason_for_flag": "Profanity", "topic_of_tweet": ["complaint"], "deletion": "DELETE"})}]}}]}},
+                {"key": "tweet_1", "tweet_url": "https://x.com/user/status/tweet_1", "response": {"candidates": [{"content": {"parts": [{"text": json.dumps({"explicit_words": [], "reason_for_flag": "Clean", "topic_of_tweet": ["tech"], "deletion": "KEEP"})}]}}]}},
+                {"key": "tweet_2", "tweet_url": "https://x.com/user/status/tweet_2", "response": {"candidates": [{"content": {"parts": [{"text": json.dumps({"explicit_words": [], "reason_for_flag": "Opinion", "topic_of_tweet": ["social"], "deletion": "DELETE"})}]}}]}},
+            ]
+            
+            fake_download_content = "\n".join(json.dumps(item) for item in result_data)
+            return fake_download_content.encode("utf-8")
+        
+    class FakeJob:
+        name = "job/1234567890"
+
+        class State:
+            name = "JOB_STATE_SUCCEEDED"
+        
+        state = State()
+
+        class Dest:
+            file_name = "files/fake_result_1234"
+
+        dest = Dest()
+
+    class FakeBatches:
+        def create(self, model, src, config):
+            return FakeJob() # returns name and dest (.filename)
+        
+        def get(sekf, name):
+            return FakeJob() # returns state (.name)
+        
+    class FakeClient:
+        files = FakeFiles()
+        batches = FakeBatches()
+
+    monkeypatch.setattr("batch.genai.Client", lambda: FakeClient())
+
+    return FakeClient()
