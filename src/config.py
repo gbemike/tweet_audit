@@ -15,8 +15,6 @@ class CriteriaConfig:
 @dataclass(frozen=True)
 class CacheConfig:
     directory: str
-    enabled: bool
-
 
 @dataclass(frozen=True)
 class ProcessingConfig:

@@ -92,9 +92,13 @@ class Storage:
             raise FileNotFoundError("No chunk files to merge")
         
         expected_chunks = self.number_of_chunks
-        if len(chunk_files) != expected_chunks:
-            logger.error(f"Expected {expected_chunks} chunks, found {len(chunk_files)}")
-            raise ValueError("Incomplete chunk files - refusing to merge")
+        all_chunks_present = len(chunk_files) == expected_chunks
+
+        if not all_chunks_present:
+            logger.warning(
+                f"Expected {expected_chunks} chunks, found {len(chunk_files)}. "
+                f"Partial merge — chunk files will be kept for next run."
+            )
 
         output_file = self.output_path / output_name
         try:
@@ -111,11 +115,17 @@ class Storage:
                             writer.writerow(row)
                     logger.info(f"Merged {file.name}")
 
-            logger.info(f"All chunks merged to: {output_file.resolve()}")
-
-            for file in chunk_files:
-                file.unlink()
-                logger.info("Cleaned up chunk files")
+            logger.info(f"{len(chunk_files)} chunks merged to: {output_file.resolve()}")
+            
+            if all_chunks_present:
+                for file in chunk_files:
+                    file.unlink()
+                    logger.info("Cleaned up chunk files")
+            else:
+                logger.warning(
+                    f"Keeping chunk files — only {len(chunk_files)} / {expected_chunks} chunks present. "
+                    f"Re-run pipeline to complete missing chunks."
+                )
 
             return output_file
         

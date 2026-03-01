@@ -30,8 +30,7 @@ def main():
         logger.error(f"Merge failed: {e}", exc_info=True)
         exit(1)
     finally:
-        if config.cache.enabled:
-            cache.release_lock()
+        cache.release_lock()
 
 if __name__ == "__main__":
     main()

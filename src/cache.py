@@ -1,3 +1,4 @@
+from typing import List
 import logging
 import pickle
 from pathlib import Path
@@ -11,22 +12,18 @@ class CacheManager:
     def __init__(self, config: AppConfig):
         cache_cfg = config.cache
         
-        self.enabled = cache_cfg.enabled
         self.cache_dir = Path(cache_cfg.directory)
 
         self.lock_path = self.cache_dir / "clear_cache.lock"
 
-        if self.enabled:
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Cache is enabled and ready at {self.cache_dir.resolve()}")
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Cache is enabled and ready at {self.cache_dir.resolve()}")
 
     def _get_file_path(self, tweet_id: str) -> Path:
         safe_id = str(tweet_id).strip()
         return self.cache_dir / f"tweet_{safe_id}.pkl"
     
     def exists(self, tweet_id: str) -> bool:
-        if not self.enabled:
-            return False
         return self._get_file_path(tweet_id).exists()
     
     def get(self, tweet_id: str):
@@ -47,16 +44,28 @@ class CacheManager:
             return None
 
     def set(self, tweet_id: str, data: Dict):
-        if not self.enabled:
-            logger.debug(f"Cache is disabled can't save")
-            return False
-        
         try:
             with open(self._get_file_path(tweet_id), 'wb') as f:
                 pickle.dump(data, f)
             return True
         except Exception as e:
             logger.warning(f"Failed to write cache for {tweet_id}: {e}")
+
+    def filter_cache_chunks(self, tweets: List[Dict]) -> List[Dict]:
+        cached_tweets = []
+        for tweet in tweets:
+            tweet_data = tweet.get("tweet", tweet)
+            tweet_id = tweet_data.get("id_str") or tweet_data.get("id")
+
+            if not tweet_id:
+                continue
+
+            cached = self.get(tweet_id)
+            if cached:
+                cached_tweets.append(cached)
+
+        return cached_tweets
+
 
     def clear(self):        
         try:
@@ -80,9 +89,6 @@ class CacheManager:
         logger.info(f"Cleared {cleared} cached files")
 
     def release_lock(self):
-        if not self.enabled:
-            return
-        
         try:
             if self.lock_path.exists():
                 self.lock_path.rmdir()

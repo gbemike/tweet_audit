@@ -47,14 +47,16 @@ for i in "${!PIDS[@]}"; do
     fi
 done
 
-if [ $FAILED -eq 1 ]; then
-    echo "ERROR: ${#FAILED_CHUNKS[@]} chunk(s) failed: ${FAILED_CHUNKS[*]}"
-    exit 1
-fi
-
 poetry run python src/merge_chunks.py
 
 if [ $? -ne 0 ]; then
     echo "Merge failed"
+    exit 1
+fi
+
+if [ $FAILED -eq 1 ]; then
+    echo "WARNING: ${#FAILED_CHUNKS[@]} chunk(s) failed: ${FAILED_CHUNKS[*]}"
+    echo "Partial merge completed with successful chunks."
+    echo "Re-run the pipeline to retry failed chunks (cache will skip completed tweets)."
     exit 1
 fi

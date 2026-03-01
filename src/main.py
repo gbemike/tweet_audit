@@ -32,7 +32,7 @@ def main():
     config = load_config(CONFIG_PATH)
     cache = CacheManager(config)
 
-    logger.info("Checking cache...")
+    logger.info("Checking cache configurations ...")
     if config.run_defaults.clear_cache:
         cache.clear()
 

@@ -56,3 +56,12 @@ class Chunker:
         filtered_chunk = self._filter_cached(chunk_data, chunk_id)    
         logger.info(f"Chunk {chunk_id}: {len(filtered_chunk)} items to process")
         return filtered_chunk
+
+    def get_all_chunks(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
+        if not (0 <= chunk_id < self.number_of_chunks):
+            raise ValueError(f"chunk_id {chunk_id} out of range [0, {self.number_of_chunks})")
+        
+        chunk_data = [item for idx, item in enumerate(tweets) if idx % self.number_of_chunks == chunk_id]
+
+        logger.info(f"Chunk {chunk_id}: {len(chunk_data)} items to process")
+        return chunk_data
