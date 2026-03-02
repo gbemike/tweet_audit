@@ -97,7 +97,6 @@ class Storage:
         if not all_chunks_present:
             logger.warning(
                 f"Expected {expected_chunks} chunks, found {len(chunk_files)}. "
-                f"Partial merge — chunk files will be kept for next run."
             )
 
         output_file = self.output_path / output_name
@@ -116,19 +115,37 @@ class Storage:
                     logger.info(f"Merged {file.name}")
 
             logger.info(f"{len(chunk_files)} chunks merged to: {output_file.resolve()}")
-            
-            if all_chunks_present:
-                for file in chunk_files:
-                    file.unlink()
-                    logger.info("Cleaned up chunk files")
-            else:
-                logger.warning(
-                    f"Keeping chunk files — only {len(chunk_files)} / {expected_chunks} chunks present. "
-                    f"Re-run pipeline to complete missing chunks."
-                )
 
             return output_file
         
         except Exception as e:
             logger.error(f"Failed to merge chunks: {e}")
+            raise
+        
+    def save_failed_ids(self, failed_ids: List[str], chunk_id: int) -> Optional[Path]:
+        if not failed_ids:
+            logger.info(f"No failed IDs to save for chunk {chunk_id}")
+            filename_json = f"failed_ids_chunk_{chunk_id}.json"
+            output_json = self.output_path / filename_json
+            try:
+                with open(output_json, "w", encoding="utf-8") as f:
+                    json.dump([], f, ensure_ascii=False, indent=2)
+                logger.info(f"Empty failed-ids file created: {output_json.resolve()}")
+                return output_json
+            except Exception as e:
+                logger.error(f"Failed to write empty failed-ids file for chunk {chunk_id}: {e}")
+                return None
+
+        filename_json = f"failed_ids_chunk_{chunk_id}.json"
+        output_json = self.output_path / filename_json
+
+        try:
+            with open(output_json, "w", encoding="utf-8") as jf:
+                json.dump(failed_ids, jf, ensure_ascii=False, indent=2)
+
+            logger.info(f"Saved {len(failed_ids)} failed IDs for chunk {chunk_id}: {output_json.resolve()}")
+            return output_json
+
+        except Exception as e:
+            logger.error(f"Failed to save failed IDs for chunk {chunk_id}: {e}")
             raise

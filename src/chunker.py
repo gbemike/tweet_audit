@@ -29,7 +29,8 @@ class Chunker:
             logger.info(f"Chunk {chunk_id}: Cache directory {self.cache.cache_dir} not found. Processing all {len(tweets)} items.")
             return tweets
     
-        filtered_chunk = []
+        uncached_chunk = []
+        cached_chunk = []
 
         for tweet in tweets:
             tweet_id = self._get_tweet_id(tweet)
@@ -38,30 +39,31 @@ class Chunker:
                 continue
             
             if not self.cache.exists(tweet_id):
-                filtered_chunk.append(tweet)
+                uncached_chunk.append(tweet) # fresh ids
+            else:
+                cached_chunk.append(tweet) # already cached ids
 
-        filtered_count = len(tweets) - len(filtered_chunk)
-        if filtered_count > 0:
-            logger.info(f"Chunk {chunk_id}: Filtered {filtered_count} cached tweets")
-        
-        return filtered_chunk
+ 
+        logger.info(f"Chunk {chunk_id}: Got {len(uncached_chunk)} uncached tweets")
+        logger.info(f"Chunk {chunk_id}: Got {len(cached_chunk)} cache tweets")
+
+        return uncached_chunk, cached_chunk
 
 
-    def get_chunk(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
+    def get_uncached_chunk(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
         if not (0 <= chunk_id < self.number_of_chunks):
             raise ValueError(f"chunk_id {chunk_id} out of range [0, {self.number_of_chunks})")
         
         chunk_data = [item for idx, item in enumerate(tweets) if idx % self.number_of_chunks == chunk_id]
 
-        filtered_chunk = self._filter_cached(chunk_data, chunk_id)    
-        logger.info(f"Chunk {chunk_id}: {len(filtered_chunk)} items to process")
-        return filtered_chunk
+        uncached_chunk, cached_chunk = self._filter_cached(chunk_data, chunk_id)    
+        return uncached_chunk, cached_chunk
 
-    def get_all_chunks(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
-        if not (0 <= chunk_id < self.number_of_chunks):
-            raise ValueError(f"chunk_id {chunk_id} out of range [0, {self.number_of_chunks})")
+    # def get_all_chunks(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
+    #     if not (0 <= chunk_id < self.number_of_chunks):
+    #         raise ValueError(f"chunk_id {chunk_id} out of range [0, {self.number_of_chunks})")
         
-        chunk_data = [item for idx, item in enumerate(tweets) if idx % self.number_of_chunks == chunk_id]
+    #     chunk_data = [item for idx, item in enumerate(tweets) if idx % self.number_of_chunks == chunk_id]
 
-        logger.info(f"Chunk {chunk_id}: {len(chunk_data)} items to process")
-        return chunk_data
+    #     logger.info(f"Chunk {chunk_id}: {len(chunk_data)} items to process")
+    #     return chunk_data

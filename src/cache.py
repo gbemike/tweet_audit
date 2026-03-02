@@ -26,7 +26,7 @@ class CacheManager:
     def exists(self, tweet_id: str) -> bool:
         return self._get_file_path(tweet_id).exists()
     
-    def get(self, tweet_id: str):
+    def get(self, tweet_id: str) -> Dict:
         cache_file = self._get_file_path(tweet_id)
 
         if not cache_file.exists():
@@ -50,21 +50,6 @@ class CacheManager:
             return True
         except Exception as e:
             logger.warning(f"Failed to write cache for {tweet_id}: {e}")
-
-    def filter_cache_chunks(self, tweets: List[Dict]) -> List[Dict]:
-        cached_tweets = []
-        for tweet in tweets:
-            tweet_data = tweet.get("tweet", tweet)
-            tweet_id = tweet_data.get("id_str") or tweet_data.get("id")
-
-            if not tweet_id:
-                continue
-
-            cached = self.get(tweet_id)
-            if cached:
-                cached_tweets.append(cached)
-
-        return cached_tweets
 
 
     def clear(self):        

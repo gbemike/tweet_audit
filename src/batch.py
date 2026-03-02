@@ -10,15 +10,16 @@ from google.genai import types
 from google.genai.errors import APIError 
 
 from cache import CacheManager
-from chunker import Chunker
+from storage import Storage
 from config import AppConfig
 
 logger = logging.getLogger(__name__)
 
 class BatchManager:
-    def __init__(self, config: AppConfig, cache: Optional[CacheManager] = None):
+    def __init__(self, config: AppConfig, storage: Storage, cache: Optional[CacheManager] = None):
         self.config = config
         self.cache = cache
+        self.storage = storage
         
         self.batch_path = Path(config.batch_files.directory)
         self.criteria = self.config.criteria
@@ -183,7 +184,7 @@ class BatchManager:
             except APIError as e:
                 logger.warning(f"API Error while polling job {job.name}. Retrying in 30s. Error: {e}")
 
-            time.sleep(30)
+            time.sleep(300)
 
     def handle_results(self, job: types.BatchJob) -> List[Dict]:
         if not job.dest or not job.dest.file_name:
@@ -203,6 +204,7 @@ class BatchManager:
 
         parsed_results = []
         failed_count = 0
+        failed_ids = []
         
         for line_num, raw_line in enumerate(file_content.strip().split("\n"), 1):
             if not raw_line:
@@ -221,7 +223,7 @@ class BatchManager:
                 failed_count += 1
                 continue
         
-            tweet_id = obj.get("key")
+            tweet_id = obj.get("key") # this is the tweet_id
             tweet_url = obj.get("tweet_url", "")
 
             try:
@@ -230,12 +232,14 @@ class BatchManager:
             except (KeyError, IndexError, TypeError) as e:
                 logger.error(f"Result {line_num} (tweet {tweet_id}): Could not extract response text: {e}")
                 failed_count += 1
+                failed_ids.append(tweet_id)
                 continue
         
             parsed = self._parse_response(text, tweet_id, tweet_url)
             if not parsed:
                 logger.error(f"Result {line_num} (tweet {tweet_id}): Failed to parse/validate response")
                 failed_count += 1
+                failed_ids.append(tweet_id)
                 continue
             
             parsed["tweet_id"] = tweet_id
@@ -254,9 +258,9 @@ class BatchManager:
         )
         
         if failed_count > 0:
-            logger.warning(f"{failed_count} tweets failed parsing/validation")
+            logger.warning(f"{failed_count} tweets failed parsing/validation!!")
         
-        return parsed_results
+        return parsed_results, failed_ids
 
     def run_batch_pipeline(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
         if not tweets:
@@ -274,6 +278,8 @@ class BatchManager:
                 logger.error(f"Error details: {completed_job.error}")
             return []
         
-        results = self.handle_results(completed_job)
+        results, failed_ids = self.handle_results(completed_job)
+
+        self.storage.save_failed_ids(failed_ids, chunk_id)
 
         return results

@@ -16,46 +16,48 @@ class Orchestrator:
         self.cache = cache
         self.storage = storage
         self.chunker = Chunker(config=self.config, cache=self.cache)
-        self.batch_manager = BatchManager(config=self.config, cache=self.cache)
+        self.batch_manager = BatchManager(config=self.config, storage=self.storage, cache=self.cache)
 
         self.fieldnames = self.config.processing.default_csv_fields
         
     def run(self, tweets: List[Dict], chunk_id: int):
         try:
-            chunk_data = self.chunker.get_chunk(tweets, chunk_id)
-            all_chunk_data = self.chunker.get_all_chunks(tweets, chunk_id)
+            # gets uncached chunks
+            uncached_tweets, cached_tweets = self.chunker.get_uncached_chunk(tweets, chunk_id)
             
-            if not chunk_data:
+            if not uncached_tweets:
                 logger.info(f"Chunk {chunk_id}: No tweets to process (all cached)")
                 return
+
+            if cached_tweets:
+                logger.info(f"Chunk {chunk_id}: {len(cached_tweets)} tweets left to process")
             
-            logger.info(f"Processing chunk {chunk_id} with {len(chunk_data)} tweets")
-            self._process_single_chunk(chunk_id, chunk_data, all_chunk_data)
+            logger.info(f"Processing chunk {chunk_id} with {len(uncached_tweets)} tweets")
+            self._process_single_chunk(chunk_id, uncached_tweets, cached_tweets)
             logger.info(f"Chunk {chunk_id}: Complete")
             
         except Exception as e:
             logger.error(f"Chunk {chunk_id}: FAILED - {e}", exc_info=True)
             sys.exit(1)
 
-    def _process_single_chunk(self, chunk_id: int, tweets: List[Dict], all_chunk_tweets: List[Dict]):
-        logger.info(f"Chunk {chunk_id}: Running batch pipeline for {len(tweets)} tweets...")
-
-        cached_tweets = self.cache.filter_cache_chunks(all_chunk_tweets)
+    def _process_single_chunk(self, chunk_id: int, uncached_tweets: List[Dict], cached_tweets: List[Dict]):
+        logger.info(f"Chunk {chunk_id}: Running batch pipeline for {len(uncached_tweets)} tweets...")
         logger.info(f"Chunk {chunk_id}: {len(cached_tweets)} previously cached tweets")
 
         try:
-            uncached_tweets = self.batch_manager.run_batch_pipeline(tweets, chunk_id)
+            processed_tweets = self.batch_manager.run_batch_pipeline(uncached_tweets, chunk_id)
         except Exception as e:
             logger.error(f"Chunk {chunk_id}: Batch pipeline failed - {e}", exc_info=True)
             raise
 
-        if not uncached_tweets:
+        if not processed_tweets:
             logger.warning(f"Chunk {chunk_id}: No results from batch pipeline")
-            uncached_tweets = []
+            processed_tweets = []
 
-        expected = len(all_chunk_tweets)
+        expected = len(cached_tweets) + len(uncached_tweets)
 
-        merged_tweets = self._merge_old_and_new_tweets(cached_tweets, uncached_tweets, chunk_id)
+        # merge new and old results
+        merged_tweets = self._merge_old_and_new_tweets(processed_tweets, cached_tweets, chunk_id)
 
         if len(merged_tweets) != expected:
             logger.warning(
@@ -79,11 +81,21 @@ class Orchestrator:
         logger.info(f"Chunk {chunk_id}: {len(merged_tweets)} tweets processed and saved")
 
 
-    def _merge_old_and_new_tweets(self, cached_tweets: List[Dict], uncached_tweets: List[Dict], chunk_id: int) -> List[Dict]:
+    def _merge_old_and_new_tweets(self, processed_tweets: List[Dict], cached_tweets: List[Dict], chunk_id: int) -> List[Dict]:
         seen_ids = set()
         merged_results = []
 
-        all_tweets = uncached_tweets + cached_tweets
+        # get old results
+        cached_tweet_results = []
+
+        for tweet in cached_tweets:
+            tweet_data = tweet.get("tweet")
+            tweet_id = tweet_data.get("id_str") or tweet_data.get("id")
+            cache_data = self.cache.get(tweet_id)
+            cached_tweet_results.append(cache_data)
+
+        # old tweets + new tweets
+        all_tweets = processed_tweets + cached_tweet_results
 
         for tweet in all_tweets:
             tweet_id = str(tweet.get("tweet_id", ""))
@@ -94,6 +106,6 @@ class Orchestrator:
 
             merged_results.append(tweet)
 
-        logger.info(f"Chunk {chunk_id}: Merged {len(cached_tweets)} cached + {len(uncached_tweets)} new = {len(merged_results)} total")
+        logger.info(f"Chunk {chunk_id}: Merged {len(cached_tweet_results)} cached + {len(processed_tweets)} new = {len(merged_results)} total")
 
         return merged_results
