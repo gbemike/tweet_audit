@@ -4,15 +4,9 @@ The tool uses a shell script as an orchestrator that spawns N (which corresponds
 
 Google's Batch API was used over the real-time API for two main reasons: the Batch API is 50% cheaper and it allows for higher throughput, hence why the parallel approach suited the API use. The major drawback is that the Batch API doesn't support JSON schema enforcement for batch file requests, unlike the real-time API. Additionally, the Batch API also has inconsistencies in it's response format. This means about 1–5% of responses may be malformed (missing fields or incorrect format), to mitigate and lessen any corruption, strict prompt engineering (using explicit JSON examples) and logging malformed responses for manual reviews are implemented within the tool. Additionally the Batch API is only available on a tiered API key, users would have to get a paid api key to run the tool.
 
-Additionally, Gemini's Batch API handles the internal async operations and queuing, meaning the main overhead is simply waiting on their computation to complete. Speed was prioritized because tweet auditing is a one-time bulk operation, not a real-time service.
+## Clean Fail
 
-[Updated tradeoff] - on retry if only 2 ids fail, retry would run these 2 ids via the batch api which isn't ideals
-
-[changes] - made cache persistently part of the process
-
-## **Fail Fast**
-
-The design ensures that each worker exits immediately on any failure, such as an invalid chunk ID, a batch processing timeout, or a storage error. The shell script, acting as the supervisor, detects these individual chunk failures and immediately aborts the final merge process. This prevents the merging of incomplete or corrupted data. Prioritizing choose data integrity over partial success.The risk of merging partial data is silent loss of information. However, failed chunks can be easily rerun individually later, as the successfully processed chunks are already cached.
+During failures, the failed_ids are saved for inspection. After one run, if there are any tweets that fail to be processed due to the parsing errors, the tool would have to be rerun again, because of the cache only the tweets which aren't in the cache will be processed, this helps immediately filter out processed from uprocessed. The main fallback with this is that if on rerun only 1 or 2 tweets nedd to be processed then the Batch API is still used for this which is not really ideal.
 
 ## **Language Choice: Python**
 
