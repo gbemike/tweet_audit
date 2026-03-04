@@ -230,14 +230,14 @@ class BatchManager:
                 response_obj = obj["response"]
                 text = response_obj["candidates"][0]["content"]["parts"][0]["text"]
             except (KeyError, IndexError, TypeError) as e:
-                logger.error(f"Result {line_num} (tweet {tweet_id}): Could not extract response text: {e}")
+                logger.error(f"Line {line_num} (tweet {tweet_id}): Could not extract response text: {e}")
                 failed_count += 1
                 failed_ids.append(tweet_id)
                 continue
         
             parsed = self._parse_response(text, tweet_id, tweet_url)
             if not parsed:
-                logger.error(f"Result {line_num} (tweet {tweet_id}): Failed to parse/validate response")
+                logger.error(f"Line {line_num} (tweet {tweet_id}): Failed to parse/validate response")
                 failed_count += 1
                 failed_ids.append(tweet_id)
                 continue
