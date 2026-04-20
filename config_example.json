@@ -1,0 +1,33 @@
+{
+  "criteria": {
+    "forbidden_words": ["profanity1", "profanity2"],
+    "topics_to_exclude": ["topic_1", "topic-2"],
+    "tone_requirements": ["tone_1", "tone_1"],
+    "additional_instructions": "polite twwets only"
+    },
+    "cache": {
+      "directory": "cache/.tweet_cache",
+      "enabled": true
+    },
+    "processing": {
+      "number_of_chunks": 5,
+      "default_csv_fields": ["tweet_url", "deletion"]
+    },
+    "model": {
+      "primary": "gemini-2.5-flash",
+      "secondary": "gemini-2.5-flash-lite",
+      "max_retries": 3
+    },
+    "batch_files": {
+      "directory": "data/batch_requests/"
+    },
+    "run_defaults": {
+      "file_path": "data/raw/tweets/tweets.js",
+      "output_path": "data/processed/tweet_audit_files/",
+      "clear_cache": false
+    },
+    "url_builder": {
+      "user": "your_username",
+      "base_url": "https://x.com/{user}/status/{id}"
+    }
+}

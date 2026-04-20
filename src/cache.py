@@ -1,0 +1,85 @@
+from typing import List
+import logging
+import pickle
+from pathlib import Path
+from typing import Dict
+
+from config import AppConfig
+
+logger = logging.getLogger(__name__)
+
+class CacheManager:
+    def __init__(self, config: AppConfig):
+        cache_cfg = config.cache
+        
+        self.cache_dir = Path(cache_cfg.directory)
+
+        self.lock_path = self.cache_dir / "clear_cache.lock"
+
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Cache is enabled and ready at {self.cache_dir.resolve()}")
+
+    def _get_file_path(self, tweet_id: str) -> Path:
+        safe_id = str(tweet_id).strip()
+        return self.cache_dir / f"tweet_{safe_id}.pkl"
+    
+    def exists(self, tweet_id: str) -> bool:
+        return self._get_file_path(tweet_id).exists()
+    
+    def get(self, tweet_id: str) -> Dict:
+        cache_file = self._get_file_path(tweet_id)
+
+        if not cache_file.exists():
+            logger.debug(f"Cache MISS for {tweet_id}")
+            return None
+        
+        try:
+            with open(cache_file, 'rb') as f:
+                cached_data = pickle.load(f)
+                logger.debug(f"Cache HIT for {tweet_id}")
+                return cached_data
+        except Exception as e:
+            logger.warning(f"Failed to load cache for {tweet_id}: {e}. Deleting file.")
+            cache_file.unlink(missing_ok=True)
+            return None
+
+    def set(self, tweet_id: str, data: Dict):
+        try:
+            with open(self._get_file_path(tweet_id), 'wb') as f:
+                pickle.dump(data, f)
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to write cache for {tweet_id}: {e}")
+
+
+    def clear(self):        
+        try:
+            self.lock_path.mkdir(exist_ok=False) 
+            logger.info("Lock acquired. Starting cache clear.")
+        except FileExistsError:
+            logger.info("Lock not needed. Skipping this request.")
+            return
+        except Exception as e:
+            logger.error(f"Failed to acquire lock: {e}")
+            return
+        
+        cleared = 0
+        for files in self.cache_dir.glob("*.pkl"):
+            try:
+                files.unlink(missing_ok=True)
+                logger.info(f"Removing {files} from cache")
+                cleared += 1
+            except Exception as e:
+                logger.error(f"Failed to delete {files}: {e}")
+        logger.info(f"Cleared {cleared} cached files")
+
+    def release_lock(self):
+        try:
+            if self.lock_path.exists():
+                self.lock_path.rmdir()
+                logger.info("Cache lock released")
+                return True
+        except Exception as e:
+            logger.warning(f"Failed to release cache lock: {e}")
+            return False
+            
