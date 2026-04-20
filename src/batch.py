@@ -3,7 +3,7 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from google import genai
 from google.genai import types
@@ -160,7 +160,7 @@ class BatchManager:
                     logger.warning(f"429 error, retrying in {wait_time}s...")
                     time.sleep(wait_time)
                     continue
-                raise e
+                raise RuntimeError(f"Failed to submit batch job for chunk {chunk_id} after {self.max_retries} attempts, due to repeated resource exhaustion or rate limiting.")
 
     def _poll_job_until_complete(self, job: types.BatchJob) -> types.BatchJob:
         if job is None:
@@ -182,14 +182,14 @@ class BatchManager:
                 if state in completed_states:
                     return current_job
             except APIError as e:
-                logger.warning(f"API Error while polling job {job.name}. Retrying in 30s. Error: {e}")
+                logger.warning(f"API Error while polling job {job.name}. Retrying in 300s. Error: {e}")
 
             time.sleep(300)
 
-    def handle_results(self, job: types.BatchJob) -> List[Dict]:
+    def handle_results(self, job: types.BatchJob) -> Tuple[List[Dict]]:
         if not job.dest or not job.dest.file_name:
             logger.error(f"Job {job.name} has no output file")
-            return
+            return [], []
 
         logger.info(f"Downloading results for job {job.name}...")
 
@@ -245,7 +245,7 @@ class BatchManager:
             parsed["tweet_id"] = tweet_id
             parsed["tweet_url"] = tweet_url
 
-            if self.cache.set(tweet_id, parsed):
+            if self.cache is not None and self.cache.set(tweet_id, parsed):
                 logger.debug(f"Cached result for tweet {tweet_id}")
 
             parsed_results.append(parsed)

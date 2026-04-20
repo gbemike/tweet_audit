@@ -88,11 +88,12 @@ class Orchestrator:
         # get old results
         cached_tweet_results = []
 
-        for tweet in cached_tweets:
-            tweet_data = tweet.get("tweet")
-            tweet_id = tweet_data.get("id_str") or tweet_data.get("id")
-            cache_data = self.cache.get(tweet_id)
-            cached_tweet_results.append(cache_data)
+        if self.cache:
+            for tweet in cached_tweets:
+                tweet_data = tweet.get("tweet")
+                tweet_id = tweet_data.get("id_str") or tweet_data.get("id")
+                cache_data = self.cache.get(tweet_id)
+                cached_tweet_results.append(cache_data)
 
         # old tweets + new tweets
         all_tweets = processed_tweets + cached_tweet_results

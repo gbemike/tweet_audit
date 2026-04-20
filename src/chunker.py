@@ -21,13 +21,13 @@ class Chunker:
 
     def _filter_cached(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
         if not self.cache:
-            return tweets
+            return tweets, []
         
         cache_dir_exists = self.cache.cache_dir.is_dir()
         
         if not cache_dir_exists:
             logger.info(f"Chunk {chunk_id}: Cache directory {self.cache.cache_dir} not found. Processing all {len(tweets)} items.")
-            return tweets
+            return tweets, []
     
         uncached_chunk = []
         cached_chunk = []
@@ -58,12 +58,3 @@ class Chunker:
 
         uncached_chunk, cached_chunk = self._filter_cached(chunk_data, chunk_id)    
         return uncached_chunk, cached_chunk
-
-    # def get_all_chunks(self, tweets: List[Dict], chunk_id: int) -> List[Dict]:
-    #     if not (0 <= chunk_id < self.number_of_chunks):
-    #         raise ValueError(f"chunk_id {chunk_id} out of range [0, {self.number_of_chunks})")
-        
-    #     chunk_data = [item for idx, item in enumerate(tweets) if idx % self.number_of_chunks == chunk_id]
-
-    #     logger.info(f"Chunk {chunk_id}: {len(chunk_data)} items to process")
-    #     return chunk_data

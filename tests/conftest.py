@@ -156,9 +156,10 @@ def valid_config(temp_dirs):
 @pytest.fixture
 def mock_batch_api(monkeypatch):
     class FakeBatchManager:
-        def __init__(self, config, cache):
+        def __init__(self, config, storage, cache):
             self.config = config
             self.cache = cache
+            self.storage = storage
 
         def run_batch_pipeline(self, tweets, chunk_id):
             results = []
@@ -171,8 +172,8 @@ def mock_batch_api(monkeypatch):
                 }
                 results.append(result)
                 
-                if self.cache and self.cache.enabled:
-                    self.cache.set(tweet_id, result)
+                # if self.cache and self.cache.enabled:
+                self.cache.set(tweet_id, result)
             
             return results
         

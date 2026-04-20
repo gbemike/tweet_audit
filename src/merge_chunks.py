@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 CONFIG_PATH = os.getenv("CONFIG_PATH")
 
 def main():
+    if not CONFIG_PATH:
+        logger.error("CONFIG_PATH environment variable is not set")
+        exit(1)
     config = load_config(CONFIG_PATH)
     cache = CacheManager(config)
     try:

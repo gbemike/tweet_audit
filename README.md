@@ -92,7 +92,7 @@ Rename the `config_example.json` to `config.json`, fill in `criteria `and `usern
     "forbidden_words": ["profanity1", "profanity2"],
     "topics_to_exclude": ["topic_1", "topic-2"],
     "tone_requirements": ["tone_1", "tone_1"],
-    "additional_instructions": "polite twwets only"
+    "additional_instructions": "polite tweets only"
   },
   "cache": {
     "directory": "cache/.tweet_cache/",

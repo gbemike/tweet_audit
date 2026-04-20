@@ -12,7 +12,6 @@ from storage import Storage
 def test_cache_initializes_from_config(valid_config):
     cache = CacheManager(valid_config)
     
-    assert cache.enabled is True
     assert cache.cache_dir.exists()
 
 

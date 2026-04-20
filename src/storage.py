@@ -39,8 +39,8 @@ class Storage:
             logger.info(f"Loaded {len(data)} items from {self.data_path}")
             return data
         except json.JSONDecodeError as e:
-                logger.error(f"Failed to decode JSON content extracted by regex: {e}")
-                raise ValueError(f"Extracted content is not valid JSON: {e}")
+            logger.error(f"Failed to decode JSON content extracted by regex: {e}")
+            raise ValueError(f"Extracted content is not valid JSON: {e}")
         except Exception as e:
             logger.error(f"Failed to read data: {e}")
             raise
@@ -82,7 +82,7 @@ class Storage:
             logger.error(f"Failed to save CSV to {output_file}: {e}")
             raise
 
-    def merge_chunks(self) -> None:
+    def merge_chunks(self) -> Path | str:
         pattern = self.config.processing.merge_pattern
         output_name = self.config.processing.merge_output_name
         chunk_files = sorted(self.output_path.glob(pattern))
@@ -92,12 +92,11 @@ class Storage:
             raise FileNotFoundError("No chunk files to merge")
         
         expected_chunks = self.number_of_chunks
-        all_chunks_present = len(chunk_files) == expected_chunks
 
-        if not all_chunks_present:
-            logger.warning(
-                f"Expected {expected_chunks} chunks, found {len(chunk_files)}. "
-            )
+        if len(chunk_files) != expected_chunks:
+            message = f"Expected {expected_chunks} chunks, found {len(chunk_files)}."
+            logger.error(message)
+            raise ValueError(message)
 
         output_file = self.output_path / output_name
         try:

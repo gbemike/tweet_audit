@@ -22,12 +22,15 @@ def main():
     parser.add_argument(
         "--chunk-id", 
         type=int, 
-        default=None, 
         help="Specify the chunk ID to process for parallel execution (0 to N-1)."
     )
     args = parser.parse_args()
 
     start_time = time.time()
+    if not CONFIG_PATH:
+        logger.error("CONFIG_PATH environment variable is not set. Please set CONFIG_PATH to a valid configuration file path before running the pipeline.")
+        raise SystemExit(1)
+        
     logger.info("Loading configuration...")
     config = load_config(CONFIG_PATH)
     cache = CacheManager(config)

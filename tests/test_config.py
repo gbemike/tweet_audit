@@ -53,8 +53,6 @@ def test_valid_config_loads(temp_dirs):
     
     assert config.processing.number_of_chunks
     assert config.url_builder.base_url == "https://x.com/{user}/status/{id}"
-    assert type(config.cache.enabled) == bool
-
 
 def test_malformed_json_fails(temp_dirs):
     config_file = temp_dirs['root'] / 'config.json'
@@ -73,5 +71,5 @@ def test_config_initializes_modules(valid_config):
     cache = CacheManager(valid_config)
     storage = Storage(valid_config)
     
-    assert cache.enabled == valid_config.cache.enabled
+    assert cache.directory.exists()
     assert storage.output_path.exists()
